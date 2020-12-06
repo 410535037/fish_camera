@@ -1,0 +1,2 @@
+rootProject.name='fish_camera'
+include ':app'
