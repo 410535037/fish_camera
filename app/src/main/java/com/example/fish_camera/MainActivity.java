@@ -7,6 +7,8 @@ import androidx.exifinterface.media.ExifInterface;
 import androidx.loader.content.CursorLoader;
 
 import android.Manifest;
+import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
@@ -16,6 +18,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -36,7 +39,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicReference;
@@ -53,7 +58,7 @@ import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
 
-    private String mPath = "";//設置高畫質的照片位址
+    String mPath = "";//設置高畫質的照片位址
     public static final String TAG = "test";
     public static final int CAMERA_PERMISSION = 100;//檢測相機權限用
     public static final int REQUEST_HIGH_IMAGE = 101;//檢測高畫質相機回傳
@@ -61,19 +66,16 @@ public class MainActivity extends AppCompatActivity {
     public static final int READ_REQUEST_CODE = 42;//讀取相簿
     public static final String URL_FEED = "123";//URL
     ImageView fish_img,fish_img_h;
-
+    TextView fish_name_h;
+    String result_str="";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button takepic = findViewById(R.id.takepic);
-        TextView fish_name = findViewById(R.id.fish_name);
-        fish_img = findViewById(R.id.fish_img);
-
         Button takepic_h = findViewById(R.id.takepic_h);
-        TextView fish_name_h = findViewById(R.id.fish_name_h);
+        fish_name_h = findViewById(R.id.fish_name_h);
         fish_img_h = findViewById(R.id.fish_img_h);
 
         ImageButton select_img = findViewById(R.id.select_img);
@@ -82,13 +84,9 @@ public class MainActivity extends AppCompatActivity {
         if (checkSelfPermission(Manifest.permission.CAMERA)!= PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.CAMERA},CAMERA_PERMISSION);
         }
-        /**按下低畫質照相之拍攝按鈕*/
-        takepic.setOnClickListener(v -> {
-            Intent lowIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
-            //檢查是否已取得權限
-            if (lowIntent.resolveActivity(getPackageManager()) == null) return;
-            startActivityForResult(lowIntent,REQUEST_LOW_IMAGE);
-        });
+
+
+
         /**按下高畫質照相之拍攝按鈕*/
         takepic_h.setOnClickListener(v -> {
             Intent highIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
@@ -100,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
             //取得相片檔案的URI位址
             Uri imageUri = FileProvider.getUriForFile(
                     getApplicationContext(),
-                    "com.jetec.cameraexample.CameraEx",//記得要跟AndroidManifest.xml中的authorities 一致
+                    "com.example.fish_camera",//記得要跟AndroidManifest.xml中的authorities 一致
                     imageFile
             );
             highIntent.putExtra(MediaStore.EXTRA_OUTPUT,imageUri);
@@ -110,6 +108,7 @@ public class MainActivity extends AppCompatActivity {
         /**按下相簿讀取按鈕*/
         select_img.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+
             intent.setType("image/*");
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
@@ -161,66 +160,44 @@ public class MainActivity extends AppCompatActivity {
         return degree;
     }
 
-    public void get_image()
-    {
-        // 建立 OkHttpClient
-        OkHttpClient client = new OkHttpClient().newBuilder().build();
-
-// 建立 Request，設定連線資訊
-        Request request = new Request.Builder()
-                .url("https://jsonplaceholder.typicode.com/posts")
-                .build();
-
-// 建立 Call
-        Call call = client.newCall(request);
-
-// 執行 Call 連線
-        call.enqueue(new Callback() {
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                // 連線成功
-                String result = response.body().string();
-                //使用 Gson 解析 Json 資料
-
-
-            }
-
-            @Override
-            public void onFailure(Call call, IOException e) {
-                // 連線失敗
-                Log.d("HKT", e.toString());
-            }
-        });
-    }
-
     /**
      * 上传图片
      * @param url
-     * @param imagePath 图片路径
      * @return 新图片的路径
      * @throws IOException
      * @throws JSONException
      */
 
-    public static String uploadImage(String url, String imagePath) throws IOException, JSONException {
+    public  String uploadImage(String url) throws IOException, JSONException {
         OkHttpClient okHttpClient = new OkHttpClient();
-        Log.d("imagePath", imagePath);
-        File file = new File(imagePath);
-        RequestBody image = RequestBody.create(MediaType.parse("image/png"), file);
+        Log.d("imagePath", mPath);
+        File file = new File( mPath);
+        RequestBody image = RequestBody.create(MediaType.parse("image/jpg"), file);
         RequestBody requestBody = new MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
-                .addFormDataPart("file", imagePath, image)
+                .addFormDataPart("image",  file.getName(), image)
                 .build();
         Request request = new Request.Builder()
                 .url(url)
                 .post(requestBody)
                 .build();
+//        try (Response response = okHttpClient.newCall(request).execute()) {
+//            if (!response.isSuccessful()) throw new IOException("Unexpected code " + response);
+//
+//
+//            System.out.println(response.body().string());
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
         Response response = okHttpClient.newCall(request).execute();
-        JSONObject jsonObject = new JSONObject(response.body().string());
-        return jsonObject.optString("image");
+        String response_str = response.body().string();
+        //JSONObject jsonObject = new JSONObject(response.body().string());
+        Log.v(TAG,"result string:"+response_str);
+        //return jsonObject.optString("image");
+        return response_str;
     }
 
-    //上面的getAbsolutePath方法根據選取的圖片的uri取得其絕對路徑,實現如下:
+    //讀取相簿用，上面的getAbsolutePath方法根據選取的圖片的uri取得其絕對路徑,實現如下:
     private String getAbsolutePath(Context context, Uri uri) {
         ContentResolver localContentResolver = context.getContentResolver();
         Cursor localCursor = localContentResolver.query(uri, null, null, null, null);
@@ -231,15 +208,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private String getRealPathFromURI(Uri contentUri) { //傳入圖片uri地址
-        String[] proj = { MediaStore.Images.Media.DATA };
-        CursorLoader loader = new CursorLoader(MainActivity.this, contentUri, proj, null, null, null);
-        Cursor cursor = loader.loadInBackground();
-        int column_index = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-        cursor.moveToFirst();
-        return cursor.getString(column_index);
-    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
@@ -247,30 +215,8 @@ public class MainActivity extends AppCompatActivity {
         /**可在此檢視回傳為哪個相片，requestCode為上述自定義，resultCode為-1就是有拍照，0則是使用者沒拍照**/
         Log.v(TAG, "onActivityResult: requestCode: "+requestCode+", resultCode "+resultCode);
 
-        /**如果是低畫質的相片回傳**/
-        if (requestCode == REQUEST_LOW_IMAGE && resultCode == -1) {
-            ImageView imageLow = findViewById(R.id.fish_img);
-            Bundle getImage = data.getExtras();
-            Bitmap getLowImage = (Bitmap) getImage.get("data");
-            Matrix matrix = new Matrix();
-            matrix.setRotate(90f);//轉90度
-
-
-            getLowImage = Bitmap.createBitmap
-            (Bitmap.createBitmap(getLowImage
-                    ,0,0
-                    ,getLowImage.getWidth()
-                    ,getLowImage.getHeight()
-                    ,matrix,true));
-
-            //以Glide設置圖片
-            Glide.with(this)
-                    .load(getLowImage)
-                    //.centerCrop()
-                    .into(imageLow);
-        }
         /**如果是高畫質的相片回傳**/
-        else if(requestCode == REQUEST_HIGH_IMAGE && resultCode == -1){
+        if(requestCode == REQUEST_HIGH_IMAGE && resultCode == -1){
             ImageView imageHigh = findViewById(R.id.fish_img_h);
             new Thread(()->{
                 int degree = readPictureDegree(mPath);
@@ -292,14 +238,57 @@ public class MainActivity extends AppCompatActivity {
                             .into(imageHigh);
                 });
             }).start();
+
+
+            File file = new File( mPath);
+            urlConnect uc = new urlConnect("http://192.168.43.99:8000/predict2",file);
+            uc.start();
+
+            showWaitingDialog dialog=new showWaitingDialog(MainActivity.this);
+            if(uc.getLockStatus())
+            {
+                Log.v(TAG,"uc.getLockStatus: "+uc.getLockStatus());
+                dialog.show();
+                while (uc.getLockStatus()) { }
+
+            }
+            Log.v(TAG,"uc.getLockStatus2: "+uc.getLockStatus());
+            dialog.cancel();
+            String result = uc.getResult();
+            fish_name_h.setText(result);
         }
+
         /**讀取相簿**/
         else if (requestCode == READ_REQUEST_CODE && resultCode == RESULT_OK) {
 
             if (data.getData()!=null) {      // select one image
                 Uri selectedImage = data.getData();
                 fish_img_h.setImageURI(selectedImage);  //showImage
-                Log.i(TAG, "Uri: " + getAbsolutePath(MainActivity.this,selectedImage));
+
+                Log.v(TAG,"selected Img: "+selectedImage);
+
+                FileUtils fileUtils = new FileUtils(getApplicationContext());
+                String path = fileUtils.getPath(selectedImage);
+                Log.v(TAG,"Path: "+path);
+                //呼叫server
+                File file = new File(path);
+                urlConnect uc2 = new urlConnect("http://192.168.43.99:8000/predict2",file);
+                uc2.start();
+
+                showWaitingDialog dialog=new showWaitingDialog(MainActivity.this);
+                if(uc2.getLockStatus())
+                {
+                    Log.v(TAG,"uc.getLockStatus: "+uc2.getLockStatus());
+                    dialog.show();
+                    while (uc2.getLockStatus()) { }
+
+                }
+                Log.v(TAG,"uc.getLockStatus2: "+uc2.getLockStatus());
+                dialog.cancel();
+                Log.v(TAG,"uc.getResult(): "+uc2.getResult());
+                fish_name_h.setText(uc2.getResult());
+
+
             }
             else if (data.getClipData() != null) { // select multiple images
                 for (int i = 0; i < data.getClipData().getItemCount(); i++) {
@@ -313,6 +302,45 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "未作任何拍攝", Toast.LENGTH_SHORT).show();
         }
 
+    }
+
+    private Dialog showWaitingDialog(Context context) {
+        /* 等待Dialog具有屏蔽其他控件的交互能力
+         * @setCancelable 为使屏幕不可点击，设置为不可取消(false)
+         * 下载等事件完成后，主动调用函数关闭该Dialog
+         */
+        ProgressDialog waitingDialog=
+                new ProgressDialog(context);
+        waitingDialog.setTitle("");
+        waitingDialog.setMessage("等待中...");
+        waitingDialog.setIndeterminate(true);
+        waitingDialog.setCancelable(false);
+        return  waitingDialog;
+    }
+
+    /**
+     * user转换为file文件
+     *返回值为file类型
+     * @param uri
+     * @return
+     */
+    private File uri2File(Uri uri) {
+        String img_path;
+        String[] proj = {MediaStore.Images.Media.DATA};
+        Cursor actualimagecursor = MainActivity.this.managedQuery(uri, proj, null,
+                null, null);
+        if (actualimagecursor == null) {
+            img_path = uri.getPath();
+        } else {
+            int actual_image_column_index = actualimagecursor
+                    .getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
+            actualimagecursor.moveToFirst();
+            img_path = actualimagecursor
+                    .getString(actual_image_column_index);
+        }
+        Log.v(TAG,"img_path: "+img_path);
+        File file = new File(img_path);
+        return file;
     }
 }
 

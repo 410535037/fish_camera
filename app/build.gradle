@@ -2,7 +2,7 @@ apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 29
-    buildToolsVersion "29.0.3"
+    buildToolsVersion "28.0.3"
 
     defaultConfig {
         applicationId "com.example.fish_camera"
@@ -39,6 +39,9 @@ dependencies {
 
     implementation 'com.loopj.android:android-async-http:1.4.9'
     implementation 'org.json:json:20160212'
+
+    implementation 'org.pytorch:pytorch_android:1.3.0'
+    implementation 'org.pytorch:pytorch_android_torchvision:1.3.0'
 
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
