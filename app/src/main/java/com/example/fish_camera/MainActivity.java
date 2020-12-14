@@ -65,9 +65,9 @@ public class MainActivity extends AppCompatActivity {
     public static final int REQUEST_LOW_IMAGE = 102;//檢測低畫質相機回傳
     public static final int READ_REQUEST_CODE = 42;//讀取相簿
     public static final String URL_FEED = "123";//URL
-    ImageView fish_img,fish_img_h;
+    ImageView fish_img_h;
     TextView fish_name_h;
-    String result_str="";
+    String Identify_result="";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -113,6 +113,23 @@ public class MainActivity extends AppCompatActivity {
             intent.addCategory(Intent.CATEGORY_OPENABLE);
             intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
             startActivityForResult(intent, READ_REQUEST_CODE);
+        });
+
+        /**搜尋食譜*/
+        Button recipe_search = findViewById(R.id.recipe_search);
+        recipe_search.setOnClickListener(v -> {
+            if(!Identify_result.equals("")&&!Identify_result.equals("failed"))
+            {
+                Intent to_webview = new Intent(MainActivity.this,recipe.class);
+                to_webview.putExtra("Identify_result",Identify_result);
+                startActivity(to_webview);
+            }
+            else
+            {
+                Toast.makeText(MainActivity.this,"請重新辨識魚類",Toast.LENGTH_LONG).show();
+            }
+
+
         });
 
     }
@@ -254,8 +271,8 @@ public class MainActivity extends AppCompatActivity {
             }
             Log.v(TAG,"uc.getLockStatus2: "+uc.getLockStatus());
             dialog.cancel();
-            String result = uc.getResult();
-            fish_name_h.setText(result);
+            Identify_result = uc.getResult();
+            fish_name_h.setText(Identify_result);
         }
 
         /**讀取相簿**/
@@ -286,7 +303,8 @@ public class MainActivity extends AppCompatActivity {
                 Log.v(TAG,"uc.getLockStatus2: "+uc2.getLockStatus());
                 dialog.cancel();
                 Log.v(TAG,"uc.getResult(): "+uc2.getResult());
-                fish_name_h.setText(uc2.getResult());
+                Identify_result = uc2.getResult();
+                fish_name_h.setText(Identify_result);
 
 
             }
@@ -318,29 +336,6 @@ public class MainActivity extends AppCompatActivity {
         return  waitingDialog;
     }
 
-    /**
-     * user转换为file文件
-     *返回值为file类型
-     * @param uri
-     * @return
-     */
-    private File uri2File(Uri uri) {
-        String img_path;
-        String[] proj = {MediaStore.Images.Media.DATA};
-        Cursor actualimagecursor = MainActivity.this.managedQuery(uri, proj, null,
-                null, null);
-        if (actualimagecursor == null) {
-            img_path = uri.getPath();
-        } else {
-            int actual_image_column_index = actualimagecursor
-                    .getColumnIndexOrThrow(MediaStore.Images.Media.DATA);
-            actualimagecursor.moveToFirst();
-            img_path = actualimagecursor
-                    .getString(actual_image_column_index);
-        }
-        Log.v(TAG,"img_path: "+img_path);
-        File file = new File(img_path);
-        return file;
-    }
+
 }
 

@@ -38,6 +38,8 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".recipe" />
+
         <!-- 儲存圖片 -->
         <provider
             android:name="androidx.core.content.FileProvider"
