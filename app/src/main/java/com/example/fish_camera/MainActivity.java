@@ -118,7 +118,7 @@ public class MainActivity extends AppCompatActivity {
         /**搜尋食譜*/
         Button recipe_search = findViewById(R.id.recipe_search);
         recipe_search.setOnClickListener(v -> {
-            if(!Identify_result.equals("")&&!Identify_result.equals("failed"))
+            if(!Identify_result.equals("")&&!Identify_result.equals("無法辨識"))
             {
                 Intent to_webview = new Intent(MainActivity.this,recipe.class);
                 to_webview.putExtra("Identify_result",Identify_result);
